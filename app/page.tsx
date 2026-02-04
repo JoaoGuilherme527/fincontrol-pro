@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Wallet, Plus, LayoutDashboard, ArrowRightLeft, TrendingUp, FolderKanban } from 'lucide-react';
+import { Plus, LayoutDashboard, ArrowRightLeft, TrendingUp, FolderKanban } from 'lucide-react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { NavButton } from '@/components/NavButton';
 import { TransactionModal } from '@/components/TransactionModal';
@@ -59,7 +60,13 @@ export default function Home() {
       {/* SIDEBAR - Desktop */}
       <aside className="hidden md:flex md:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shrink-0 md:h-screen md:sticky md:top-0 flex-col">
         <div className="p-4 md:p-6 flex items-center gap-2 font-bold text-lg md:text-xl">
-          <Wallet className="w-5 h-5 md:w-6 md:h-6" />
+          <Image
+            src="/logo.jpg"
+            alt="FinControl Logo"
+            width={48}
+            height={48}
+            className="w-12 h-12 md:w-14 md:h-14 object-contain"
+          />
           <span>FinControl</span>
         </div>
 
