@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, LayoutDashboard, ArrowRightLeft, TrendingUp, FolderKanban } from 'lucide-react';
+import { Plus, LayoutDashboard, ArrowRightLeft, TrendingUp, FolderKanban, Settings } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { NavButton } from '@/components/NavButton';
@@ -10,16 +10,22 @@ import { DashboardView } from '@/components/views/DashboardView';
 import { TransactionsView } from '@/components/views/TransactionsView';
 import { InvestmentsView } from '@/components/views/InvestmentsView';
 import { CategoriesView } from '@/components/views/CategoriesView';
+import { SettingsView } from '@/components/views/SettingsView';
 import { useTransactions } from '@/hooks/useTransactions';
-import { useCategories } from '@/hooks/useCategories';
+import { useCategories, DEFAULT_CATEGORIES } from '@/hooks/useCategories';
 import { useToast } from '@/contexts/ToastContext';
+import { PeriodFilter } from '@/lib/period';
+import { Transaction, Categories } from '@/lib/types';
+
+type Tab = 'dashboard' | 'transactions' | 'investments' | 'categories' | 'settings';
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'investments' | 'categories'>('dashboard');
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [period, setPeriod] = useState<PeriodFilter>({ type: 'current-month' });
 
-  const { transactions, totals, finalBalance, addTransaction, deleteTransaction } = useTransactions();
-  const { categories, addCategory, editCategory, deleteCategory, getCategoryNames } = useCategories();
+  const { transactions, addTransaction, deleteTransaction, setTransactions } = useTransactions();
+  const { categories, addCategory, editCategory, deleteCategory, getCategoryNames, setCategories } = useCategories();
   const { showToast } = useToast();
 
   const categoryNames = {
@@ -52,6 +58,16 @@ export default function Home() {
   const handleDeleteCategory = (type: 'income' | 'expense' | 'investment', id: string) => {
     deleteCategory(type, id);
     showToast('Categoria excluída', 'info');
+  };
+
+  const handleImportData = (importedTransactions: Transaction[], importedCategories: Categories) => {
+    setTransactions(importedTransactions);
+    setCategories(importedCategories);
+  };
+
+  const handleClearData = () => {
+    setTransactions([]);
+    setCategories(DEFAULT_CATEGORIES);
   };
 
   return (
@@ -95,6 +111,12 @@ export default function Home() {
             icon={<FolderKanban size={20} />}
             label="Categorias"
           />
+          <NavButton
+            active={activeTab === 'settings'}
+            onClick={() => setActiveTab('settings')}
+            icon={<Settings size={20} />}
+            label="Configurações"
+          />
         </nav>
 
         <div className="p-4 border-t border-slate-200 dark:border-slate-800">
@@ -106,7 +128,7 @@ export default function Home() {
 
       {/* BOTTOM TAB BAR - Mobile */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 z-40 safe-area-pb">
-        <div className="grid grid-cols-4 gap-1 px-2 py-2">
+        <div className="grid grid-cols-5 gap-1 px-2 py-2">
           <button
             onClick={() => setActiveTab('dashboard')}
             className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-colors ${activeTab === 'dashboard'
@@ -150,6 +172,17 @@ export default function Home() {
             <FolderKanban size={20} />
             <span className="text-xs mt-1 font-medium">Categorias</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-colors ${activeTab === 'settings'
+              ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
+              : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+          >
+            <Settings size={20} />
+            <span className="text-xs mt-1 font-medium">Config.</span>
+          </button>
         </div>
       </nav>
 
@@ -162,15 +195,17 @@ export default function Home() {
               {activeTab === 'transactions' && 'Todas Transações'}
               {activeTab === 'investments' && 'Carteira de Investimentos'}
               {activeTab === 'categories' && 'Gerenciar Categorias'}
+              {activeTab === 'settings' && 'Configurações'}
             </h1>
             <p className="text-slate-500 text-xs sm:text-sm md:text-base">
               {activeTab === 'dashboard' && 'Organize o que você ganha, gasta e investe.'}
               {activeTab === 'transactions' && 'Visualize e gerencie todas as suas movimentações.'}
               {activeTab === 'investments' && 'Acompanhe seus investimentos.'}
               {activeTab === 'categories' && 'Personalize suas categorias financeiras.'}
+              {activeTab === 'settings' && 'Gerencie os dados salvos no seu navegador.'}
             </p>
           </div>
-          {activeTab !== 'categories' && (
+          {activeTab !== 'categories' && activeTab !== 'settings' && (
             <Button onClick={() => setIsModalOpen(true)} className="gap-2 w-full sm:w-auto">
               <Plus size={16} /> Nova Movimentação
             </Button>
@@ -178,7 +213,7 @@ export default function Home() {
         </header>
 
         {activeTab === 'dashboard' && (
-          <DashboardView totals={totals} finalBalance={finalBalance} transactions={transactions} />
+          <DashboardView transactions={transactions} period={period} onPeriodChange={setPeriod} />
         )}
 
         {activeTab === 'transactions' && (
@@ -195,6 +230,16 @@ export default function Home() {
             onAddCategory={handleAddCategory}
             onEditCategory={handleEditCategory}
             onDeleteCategory={handleDeleteCategory}
+          />
+        )}
+
+        {activeTab === 'settings' && (
+          <SettingsView
+            transactions={transactions}
+            categories={categories}
+            onImport={handleImportData}
+            onClearData={handleClearData}
+            notify={showToast}
           />
         )}
 

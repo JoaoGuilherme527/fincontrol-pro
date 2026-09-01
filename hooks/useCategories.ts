@@ -1,14 +1,15 @@
 import { useLocalStorage } from './useLocalStorage';
 import { Category, Categories, TransactionType, DEFAULT_INCOME_CATEGORIES, DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INVESTMENT_CATEGORIES } from '@/lib/types';
+import { STORAGE_KEYS } from '@/lib/backup';
 
-const DEFAULT_CATEGORIES: Categories = {
+export const DEFAULT_CATEGORIES: Categories = {
     income: DEFAULT_INCOME_CATEGORIES,
     expense: DEFAULT_EXPENSE_CATEGORIES,
     investment: DEFAULT_INVESTMENT_CATEGORIES,
 };
 
 export function useCategories() {
-    const [categories, setCategories] = useLocalStorage<Categories>('fincontrol-categories', DEFAULT_CATEGORIES);
+    const [categories, setCategories] = useLocalStorage<Categories>(STORAGE_KEYS.categories, DEFAULT_CATEGORIES);
 
     const addCategory = (type: TransactionType, name: string) => {
         const newCategory: Category = {
@@ -54,5 +55,6 @@ export function useCategories() {
         deleteCategory,
         getCategoriesByType,
         getCategoryNames,
+        setCategories,
     };
 }

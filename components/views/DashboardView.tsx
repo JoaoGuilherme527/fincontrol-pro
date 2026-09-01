@@ -1,27 +1,37 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { KPICard } from '@/components/KPICard';
+import { PeriodSelector } from '@/components/PeriodSelector';
 import { DollarSign, TrendingUp, TrendingDown, PiggyBank, Filter } from 'lucide-react';
-import { Transaction, Totals } from '@/lib/types';
+import { Transaction } from '@/lib/types';
 import { formatBRL } from '@/lib/currency';
 import { getChartData } from '@/lib/chart';
 import { ChartFilterDrawer, ChartPeriodFilter } from '@/components/ChartFilterDrawer';
+import { PeriodFilter, calculateTotals, filterTransactionsByPeriod, getPeriodLabel, getPeriodSuffix } from '@/lib/period';
 
 interface DashboardViewProps {
-    totals: Totals;
-    finalBalance: number;
     transactions: Transaction[];
+    period: PeriodFilter;
+    onPeriodChange: (period: PeriodFilter) => void;
 }
 
-export function DashboardView({ totals, finalBalance, transactions }: DashboardViewProps) {
+export function DashboardView({ transactions, period, onPeriodChange }: DashboardViewProps) {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [chartFilter, setChartFilter] = useState<ChartPeriodFilter>({
         type: 'days',
         value: 7,
         label: 'Últimos 7 dias'
     });
+
+    const periodTransactions = useMemo(
+        () => filterTransactionsByPeriod(transactions, period),
+        [transactions, period]
+    );
+    const totals = useMemo(() => calculateTotals(periodTransactions), [periodTransactions]);
+    const finalBalance = totals.income - totals.expense - totals.investment;
+    const periodSuffix = getPeriodSuffix(period);
 
     const chartData = getChartData(transactions, chartFilter.type, chartFilter.value);
     const isLineChart = chartData.length > 15;
@@ -66,13 +76,16 @@ export function DashboardView({ totals, finalBalance, transactions }: DashboardV
 
     return (
         <div className="space-y-6">
+            {/* PERIOD SELECTOR */}
+            <PeriodSelector filter={period} onChange={onPeriodChange} count={periodTransactions.length} />
+
             {/* KPI CARDS */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <KPICard
                     title="Saldo Final"
                     value={formatBRL(finalBalance)}
                     icon={<DollarSign className="text-slate-500" />}
-                    subtext="Disponível em conta"
+                    subtext={getPeriodLabel(period)}
                     highlight={true}
                 />
                 <KPICard
@@ -88,7 +101,7 @@ export function DashboardView({ totals, finalBalance, transactions }: DashboardV
                     color="text-red-600 dark:text-red-400"
                 />
                 <KPICard
-                    title="Investido no Mês"
+                    title={`Investido ${periodSuffix}`}
                     value={formatBRL(totals.investment)}
                     icon={<PiggyBank className="text-blue-500" />}
                     color="text-blue-600 dark:text-blue-400"
@@ -192,7 +205,12 @@ export function DashboardView({ totals, finalBalance, transactions }: DashboardV
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">
-                            {transactions.slice(0, 5).map(t => (
+                            {periodTransactions.length === 0 && (
+                                <p className="text-sm text-slate-500 text-center py-4">
+                                    Nenhuma transação neste período.
+                                </p>
+                            )}
+                            {periodTransactions.slice(0, 5).map(t => (
                                 <div key={t.id} className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800 last:border-0">
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium truncate">{t.description}</p>
