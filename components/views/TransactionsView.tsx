@@ -3,17 +3,18 @@
 import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { Transaction } from '@/lib/types';
 import { formatBRL } from '@/lib/currency';
 import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
 
 interface TransactionsViewProps {
     transactions: Transaction[];
+    onEdit: (transaction: Transaction) => void;
     onDelete: (id: number) => void;
 }
 
-export function TransactionsView({ transactions, onDelete }: TransactionsViewProps) {
+export function TransactionsView({ transactions, onEdit, onDelete }: TransactionsViewProps) {
     const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; transaction: Transaction | null }>({
         isOpen: false,
         transaction: null
@@ -94,10 +95,25 @@ export function TransactionsView({ transactions, onDelete }: TransactionsViewPro
                                         <td className={`px-4 py-3 text-right font-medium ${getTypeColor(t.type)}`}>
                                             {formatBRL(t.amount)}
                                         </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <button onClick={() => handleDeleteClick(t)} className="text-slate-400 hover:text-red-500 transition-colors">
-                                                <Trash2 size={16} />
-                                            </button>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-end gap-3">
+                                                <button
+                                                    onClick={() => onEdit(t)}
+                                                    className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                                                    title="Editar transação"
+                                                    aria-label={`Editar ${t.description}`}
+                                                >
+                                                    <Pencil size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteClick(t)}
+                                                    className="text-slate-400 hover:text-red-500 transition-colors"
+                                                    title="Excluir transação"
+                                                    aria-label={`Excluir ${t.description}`}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -117,12 +133,22 @@ export function TransactionsView({ transactions, onDelete }: TransactionsViewPro
                                         <h3 className="font-semibold text-base mb-1">{t.description}</h3>
                                         <p className="text-xs text-slate-500">{t.category}</p>
                                     </div>
-                                    <button
-                                        onClick={() => handleDeleteClick(t)}
-                                        className="text-slate-400 hover:text-red-500 transition-colors ml-2"
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
+                                    <div className="flex items-center gap-3 ml-2 shrink-0">
+                                        <button
+                                            onClick={() => onEdit(t)}
+                                            className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                                            aria-label={`Editar ${t.description}`}
+                                        >
+                                            <Pencil size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteClick(t)}
+                                            className="text-slate-400 hover:text-red-500 transition-colors"
+                                            aria-label={`Excluir ${t.description}`}
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="flex justify-between items-center mt-3">

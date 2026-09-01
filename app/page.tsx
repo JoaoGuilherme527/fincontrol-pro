@@ -11,10 +11,12 @@ import { TransactionsView } from '@/components/views/TransactionsView';
 import { InvestmentsView } from '@/components/views/InvestmentsView';
 import { CategoriesView } from '@/components/views/CategoriesView';
 import { SettingsView } from '@/components/views/SettingsView';
+import { TransactionFormValues } from '@/components/TransactionModal';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useCategories, DEFAULT_CATEGORIES } from '@/hooks/useCategories';
+import { usePeriodFilter } from '@/hooks/usePeriodFilter';
 import { useToast } from '@/contexts/ToastContext';
-import { PeriodFilter } from '@/lib/period';
+import { DEFAULT_PERIOD } from '@/lib/period';
 import { Transaction, Categories } from '@/lib/types';
 
 type Tab = 'dashboard' | 'transactions' | 'investments' | 'categories' | 'settings';
@@ -22,9 +24,10 @@ type Tab = 'dashboard' | 'transactions' | 'investments' | 'categories' | 'settin
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [period, setPeriod] = useState<PeriodFilter>({ type: 'current-month' });
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [period, setPeriod] = usePeriodFilter();
 
-  const { transactions, addTransaction, deleteTransaction, setTransactions } = useTransactions();
+  const { transactions, addTransaction, updateTransaction, deleteTransaction, setTransactions } = useTransactions();
   const { categories, addCategory, editCategory, deleteCategory, getCategoryNames, setCategories } = useCategories();
   const { showToast } = useToast();
 
@@ -34,10 +37,25 @@ export default function Home() {
     investment: getCategoryNames('investment'),
   };
 
-  const handleAddTransaction = (newTransaction: { description: string; amount: number; type: 'income' | 'expense' | 'investment'; category: string; date: string }) => {
-    addTransaction(newTransaction);
+  const closeTransactionModal = () => {
     setIsModalOpen(false);
-    showToast('Transação adicionada com sucesso!', 'success');
+    setEditingTransaction(null);
+  };
+
+  const handleSubmitTransaction = (values: TransactionFormValues) => {
+    if (editingTransaction) {
+      updateTransaction(editingTransaction.id, values);
+      showToast('Transação atualizada com sucesso!', 'success');
+    } else {
+      addTransaction(values);
+      showToast('Transação adicionada com sucesso!', 'success');
+    }
+    closeTransactionModal();
+  };
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setIsModalOpen(true);
   };
 
   const handleDeleteTransaction = (id: number) => {
@@ -68,6 +86,7 @@ export default function Home() {
   const handleClearData = () => {
     setTransactions([]);
     setCategories(DEFAULT_CATEGORIES);
+    setPeriod(DEFAULT_PERIOD);
   };
 
   return (
@@ -206,7 +225,7 @@ export default function Home() {
             </p>
           </div>
           {activeTab !== 'categories' && activeTab !== 'settings' && (
-            <Button onClick={() => setIsModalOpen(true)} className="gap-2 w-full sm:w-auto">
+            <Button onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }} className="gap-2 w-full sm:w-auto">
               <Plus size={16} /> Nova Movimentação
             </Button>
           )}
@@ -217,7 +236,11 @@ export default function Home() {
         )}
 
         {activeTab === 'transactions' && (
-          <TransactionsView transactions={transactions} onDelete={handleDeleteTransaction} />
+          <TransactionsView
+            transactions={transactions}
+            onEdit={handleEditTransaction}
+            onDelete={handleDeleteTransaction}
+          />
         )}
 
         {activeTab === 'investments' && (
@@ -245,11 +268,13 @@ export default function Home() {
 
       </main>
 
-      {/* MODAL DE ADIÇÃO */}
+      {/* MODAL DE ADIÇÃO / EDIÇÃO */}
       {isModalOpen && (
         <TransactionModal
-          onClose={() => setIsModalOpen(false)}
-          onSubmit={handleAddTransaction}
+          key={editingTransaction?.id ?? 'new'}
+          transaction={editingTransaction}
+          onClose={closeTransactionModal}
+          onSubmit={handleSubmitTransaction}
           categoryNames={categoryNames}
         />
       )}

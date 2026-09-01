@@ -5,26 +5,40 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TransactionType } from '@/lib/types';
+import { Transaction, TransactionType } from '@/lib/types';
+import { todayKey } from '@/lib/period';
+
+export interface TransactionFormValues {
+    description: string;
+    amount: number;
+    type: TransactionType;
+    category: string;
+    date: string;
+}
 
 interface TransactionModalProps {
     onClose: () => void;
-    onSubmit: (transaction: { description: string; amount: number; type: TransactionType; category: string; date: string }) => void;
+    onSubmit: (transaction: TransactionFormValues) => void;
     categoryNames: {
         income: string[];
         expense: string[];
         investment: string[];
     };
+    /** When provided the modal edits this transaction instead of creating a new one. */
+    transaction?: Transaction | null;
 }
 
-export function TransactionModal({ onClose, onSubmit, categoryNames }: TransactionModalProps) {
+export function TransactionModal({ onClose, onSubmit, categoryNames, transaction }: TransactionModalProps) {
+    const isEditing = Boolean(transaction);
+
     const [formData, setFormData] = useState({
-        description: '',
-        amount: '',
-        type: 'expense' as TransactionType,
-        category: '',
-        date: new Date().toISOString().split('T')[0]
+        description: transaction?.description ?? '',
+        amount: transaction ? String(transaction.amount) : '',
+        type: (transaction?.type ?? 'expense') as TransactionType,
+        category: transaction?.category ?? '',
+        date: transaction?.date ?? todayKey()
     });
+    const [error, setError] = useState('');
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
@@ -38,37 +52,37 @@ export function TransactionModal({ onClose, onSubmit, categoryNames }: Transacti
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.description || !formData.amount || !formData.category) return;
 
-        onSubmit({
-            ...formData,
-            amount: parseFloat(formData.amount)
-        });
+        const description = formData.description.trim();
+        const amount = parseFloat(formData.amount);
+
+        if (!description) return setError('Informe uma descrição.');
+        if (!formData.amount || Number.isNaN(amount) || amount <= 0) return setError('Informe um valor maior que zero.');
+        if (!formData.date) return setError('Informe uma data.');
+        if (!formData.category) return setError('Selecione uma categoria.');
+
+        setError('');
+        onSubmit({ ...formData, description, amount });
     };
 
     const getCategoryOptions = (): string[] => {
-        switch (formData.type) {
-            case 'income':
-                return categoryNames.income;
-            case 'expense':
-                return categoryNames.expense;
-            case 'investment':
-                return categoryNames.investment;
-            default:
-                return [];
+        const options = categoryNames[formData.type] ?? [];
+        // Keep the saved category selectable even if it was renamed or removed later
+        if (formData.category && !options.includes(formData.category)) {
+            return [formData.category, ...options];
         }
+        return options;
     };
 
     const handleTypeChange = (type: TransactionType) => {
-        const newCategories = type === 'income' ? categoryNames.income :
-            type === 'expense' ? categoryNames.expense :
-                categoryNames.investment;
+        const newCategories = categoryNames[type] ?? [];
 
-        setFormData({
-            ...formData,
+        setFormData(prev => ({
+            ...prev,
             type,
-            category: newCategories[0] || ''
-        });
+            // The old category belongs to the previous type, so pick a valid one
+            category: newCategories.includes(prev.category) ? prev.category : (newCategories[0] || '')
+        }));
     };
 
     return (
@@ -83,7 +97,9 @@ export function TransactionModal({ onClose, onSubmit, categoryNames }: Transacti
                 onClick={(e) => e.stopPropagation()}
             >
                 <CardHeader>
-                    <CardTitle className="text-lg md:text-xl">Nova Movimentação</CardTitle>
+                    <CardTitle className="text-lg md:text-xl">
+                        {isEditing ? 'Editar Movimentação' : 'Nova Movimentação'}
+                    </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
@@ -164,9 +180,15 @@ export function TransactionModal({ onClose, onSubmit, categoryNames }: Transacti
                             </Select>
                         </div>
 
+                        {error && (
+                            <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+                        )}
+
                         <div className="grid grid-cols-2 gap-2 pt-2 md:pt-4">
                             <Button variant="outline" className="w-full text-xs md:text-sm" onClick={handleClose} type="button">Cancelar</Button>
-                            <Button className="w-full text-xs md:text-sm" type="submit">Salvar</Button>
+                            <Button className="w-full text-xs md:text-sm" type="submit">
+                                {isEditing ? 'Salvar alterações' : 'Salvar'}
+                            </Button>
                         </div>
                     </form>
                 </CardContent>

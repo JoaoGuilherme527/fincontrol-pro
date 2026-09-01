@@ -19,7 +19,42 @@ export const MONTH_NAMES = [
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
+const PERIOD_TYPES: PeriodType[] = ['current-month', 'month', 'range', 'all'];
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 const pad2 = (value: number): string => String(value).padStart(2, '0');
+
+export const DEFAULT_PERIOD: PeriodFilter = { type: 'current-month' };
+
+/**
+ * Coerces a value read back from localStorage into a usable filter.
+ * Anything malformed falls back to the current month rather than silently
+ * leaving the dashboard with no active period.
+ */
+export function normalizePeriodFilter(value: unknown): PeriodFilter {
+    if (!value || typeof value !== 'object') return DEFAULT_PERIOD;
+
+    const filter = value as Record<string, unknown>;
+    const type = filter.type as PeriodType;
+    if (!PERIOD_TYPES.includes(type)) return DEFAULT_PERIOD;
+
+    if (type === 'month') {
+        const month = Number(filter.month);
+        const year = Number(filter.year);
+        if (!Number.isInteger(month) || month < 0 || month > 11) return DEFAULT_PERIOD;
+        if (!Number.isInteger(year) || year < 1900 || year > 3000) return DEFAULT_PERIOD;
+        return { type, month, year };
+    }
+
+    if (type === 'range') {
+        const start = typeof filter.start === 'string' && DATE_KEY_PATTERN.test(filter.start) ? filter.start : undefined;
+        const end = typeof filter.end === 'string' && DATE_KEY_PATTERN.test(filter.end) ? filter.end : undefined;
+        if (!start && !end) return DEFAULT_PERIOD;
+        return { type, start, end };
+    }
+
+    return { type };
+}
 
 /** Local (not UTC) YYYY-MM-DD for a Date */
 export function toDateKey(date: Date): string {

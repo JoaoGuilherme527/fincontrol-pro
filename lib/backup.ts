@@ -3,6 +3,8 @@ import { Transaction, TransactionType, Categories, Category } from './types';
 export const STORAGE_KEYS = {
     transactions: 'fincontrol-transactions',
     categories: 'fincontrol-categories',
+    /** UI preference, deliberately left out of the backup payload */
+    period: 'fincontrol-period',
 } as const;
 
 export const BACKUP_APP_ID = 'fincontrol-pro';

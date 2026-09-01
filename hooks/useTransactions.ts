@@ -19,6 +19,10 @@ export function useTransactions() {
         setTransactions(prev => [newTransaction, ...prev]);
     };
 
+    const updateTransaction = (id: number, changes: Omit<Transaction, 'id'>) => {
+        setTransactions(prev => prev.map(t => (t.id === id ? { ...changes, id } : t)));
+    };
+
     const deleteTransaction = (id: number) => {
         setTransactions(prev => prev.filter(t => t.id !== id));
     };
@@ -28,6 +32,7 @@ export function useTransactions() {
         totals,
         finalBalance,
         addTransaction,
+        updateTransaction,
         deleteTransaction,
         setTransactions,
     };
